@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.csv
 
 # Distribution / packaging
 .Python
@@ -54,6 +55,9 @@ cover/
 # Translations
 *.mo
 *.pot
+*.csv
+*.python-version
+
 
 # Django stuff:
 *.log
