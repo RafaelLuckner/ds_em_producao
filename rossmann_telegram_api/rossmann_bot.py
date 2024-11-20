@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import pandas as pd 
+import matplotlib.pyplot as plt
 from flask import Flask, request, Response
 
 # constans 
@@ -18,7 +19,6 @@ TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 
 # # webhook render
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/setWebhook?url=https://bot-telegram-nqm9.onrender.com
-
 
 # # send Message
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/sendMessage?chat_id=6056307810&text=Hi Biruliru, I am doing good, tks!
@@ -37,7 +37,6 @@ def send_message(chat_id, text):
 
     # send Message
     # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/sendMessage?chat_id=6056307810&text=Hi Biruliru, I am doing good, tks!
-
 
 def load_dataset(store_id):
     # loading test dataset
@@ -60,7 +59,6 @@ def load_dataset(store_id):
     data = json.dumps(df_test.to_dict( orient = 'records'))
     return data
 
-
 def predict(data):
         # API Call
     url = 'https://ds-em-producao-n8qd.onrender.com/rossmann/predict'
@@ -74,7 +72,6 @@ def predict(data):
     d1 = pd.DataFrame(r.json(), columns=r.json()[0].keys())
 
     return d1
-
 
 def parse_message(message):
     chat_id = message['message']['chat']['id']
@@ -91,6 +88,37 @@ def parse_message(message):
 
     return chat_id, store_id
 
+def create_chart(data, store_id):
+    # Exemplo de dados para o gráfico
+    dates = data['date']
+    sales = data['prediction']
+
+    # Criando o gráfico
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, sales, marker='o', label=f'Store {store_id}')
+    plt.title(f'Sales Prediction for Store {store_id}')
+    plt.xlabel('Date')
+    plt.ylabel('Prediction')
+    plt.legend()
+    plt.grid()
+
+    # Salvando o gráfico como imagem
+    filepath = f'temp_chart_{store_id}.png'
+    plt.savefig(filepath)
+    plt.close()  # Fecha o gráfico para economizar memória
+
+    return filepath
+
+def send_chart(chat_id, filepath):
+    url = f'https://api.telegram.org/bot{TOKEN}/sendPhoto'
+    with open(filepath, 'rb') as photo:
+        r = requests.post(url, data={'chat_id': chat_id}, files={'photo': photo})
+
+    print(f"Status Code: {r.status_code}")
+    if r.status_code == 200:
+        print("Gráfico enviado com sucesso!")
+    else:
+        print(f"Erro ao enviar gráfico: {r.text}")
 
 # API initialize 
 app = Flask(__name__) 
@@ -114,11 +142,16 @@ def index():
                 # calculation
                 d2 = d1[['store','prediction']].groupby('store').sum('prediction').reset_index()
 
+                # Criar e enviar gráfico
+                filepath = create_chart(d1, store_id)
+                send_chart(chat_id, filepath)
+
+
                 # send message    
-
                 msg = (f'Store Number {d2["store"].values[0]}: will sell ${d2["prediction"].values[0]:,.2f} in the next 6 weeks')
-
                 send_message(chat_id, msg)
+
+                os.remove(filepath)
                 return Response( 'OK', status = 200)
             
             else:
