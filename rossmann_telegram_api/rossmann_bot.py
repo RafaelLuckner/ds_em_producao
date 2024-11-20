@@ -16,6 +16,9 @@ TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 # # webhook 
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/setWebhook?url=https://38bc9190bea9b0.lhr.life
 
+# # webhook render
+# https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/setWebhook?url=https://bot-telegram-nqm9.onrender.com
+
 
 # # send Message
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/sendMessage?chat_id=6056307810&text=Hi Biruliru, I am doing good, tks!
@@ -38,8 +41,8 @@ def send_message(chat_id, text):
 
 def load_dataset(store_id):
     # loading test dataset
-    df10 = pd.read_csv('../data/test.csv')
-    df_store_raw = pd.read_csv('../data/store.csv')
+    df10 = pd.read_csv('test.csv')
+    df_store_raw = pd.read_csv('store.csv')
     # merge test dataset + store
     df_test = pd.merge(df10, df_store_raw, how = 'left', on= 'Store')
 
@@ -97,6 +100,7 @@ app = Flask(__name__)
 def index():
     if request.method == 'POST':
         message = request.get_json()
+        print(f"Payload recebido: {message}")
 
         chat_id, store_id = parse_message(message)
 
