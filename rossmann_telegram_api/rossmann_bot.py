@@ -2,8 +2,12 @@ import os
 import json
 import requests
 import pandas as pd 
-import matplotlib.pyplot as plt
 from flask import Flask, request, Response
+
+import matplotlib.dates as mdates
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+
 
 # constans 
 TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
@@ -61,13 +65,13 @@ def load_dataset(store_id):
 
 def predict(data):
         # API Call
-    url = 'https://ds-em-producao-n8qd.onrender.com/rossmann/predict'
+    url = 'https://ds-em-producao-n8qd.onrender.com/machine_learning_api/predict'
 
     header = {'Content-type': 'application/json'}
 
     r = requests.post(url, data = data, headers = header)
 
-    print('Status Code {}'.format( r.status_code ))
+    print('Status Code {}!!'.format( r.status_code ))
 
     d1 = pd.DataFrame(r.json(), columns=r.json()[0].keys())
 
@@ -76,6 +80,10 @@ def predict(data):
 def parse_message(message):
     chat_id = message['message']['chat']['id']
     store_id = message['message']['text']
+
+    if store_id == '/start':
+        send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
+        return Response( 'OK', status = 200)
     
     store_id = store_id.replace('/' , '')
 
@@ -89,18 +97,75 @@ def parse_message(message):
     return chat_id, store_id
 
 def create_chart(data, store_id):
-    # Exemplo de dados para o gráfico
-    dates = data['date']
-    sales = data['prediction']
+    data['date'] = pd.to_datetime(data['date'])
 
-    # Criando o gráfico
-    plt.figure(figsize=(10, 6))
-    plt.plot(dates, sales, marker='o', label=f'Store {store_id}')
-    plt.title(f'Sales Prediction for Store {store_id}')
-    plt.xlabel('Date')
-    plt.ylabel('Prediction')
-    plt.legend()
-    plt.grid()
+    sales = data['prediction']
+    start_date = data['date'][0]
+    dates = data['date']
+
+    # Criando a figura e o eixo
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    # Paleta de cores
+    bar_color = '#A6ACAF'  # Cinza
+    highlight_color = '#C0392B'  # Vermelho 
+
+    # Criando o gráfico de barras com cores personalizadas (cinza)
+    bars = ax.bar(dates, sales, label=f'Store {store_id}', color=bar_color, edgecolor='#778899', linewidth=1.5)
+
+    # Criando um DataFrame para manipulação
+    df = pd.DataFrame({'date': dates, 'sales': sales})
+
+    # Adicionando uma coluna com o nome do dia da semana
+    df['weekday'] = df['date'].dt.strftime('%A')
+
+    # Adicionando uma coluna com o número da semana
+    df['week'] = df['date'].dt.isocalendar().week
+
+    # Encontrando o dia com mais vendas por semana
+    top_days_per_week = df.loc[df.groupby('week')['sales'].idxmax()]
+
+    # Plotando os valores e os dias da semana dos dias de maior faturamento por semana
+    for _, row in top_days_per_week.iterrows():
+        ax.annotate(f"{row['sales']:,.0f}$", 
+                    (row['date'], row['sales']), 
+                    textcoords="offset points", 
+                    xytext=(-5, 10), ha='center', fontsize=12, color=highlight_color, fontweight='bold')
+        ax.annotate(f"{row['weekday']}", 
+                    (row['date'], row['sales']), 
+                    textcoords="offset points", 
+                    xytext=(-5, 25), ha='center', fontsize=12, color='black')  
+
+    # Configurando o formato das datas no eixo X
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b %Y'))
+
+    # Definindo o intervalo para as datas no eixo X (semanal)
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO, interval=1))
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(True) 
+    ax.spines['bottom'].set_visible(True)  
+    ax.xaxis.label.set_visible(False)
+
+    # Ajustando as margens
+    ax.set_ylim(0, sales.max() * 1.2)
+
+    # Melhorando a grade
+    ax.grid(True, linestyle='--', alpha=0.5)
+
+    # Calculando o total de vendas
+    total_sales = df['sales'].sum()
+
+    # Adicionando a caixa com o total de vendas no canto superior direito
+    plt.text(0.98, 1, f'Total Sales: {total_sales:,.0f}$', ha='right', va='top', fontsize=20, 
+            bbox=dict(facecolor='white', edgecolor=highlight_color, boxstyle='round,pad=0.7', alpha=1), fontweight='normal', transform=ax.transAxes)
+
+
+    ax.set_title(' ', fontsize=10, color='#2C3E50',y=1)  # Título em cinza escuro
+    # ax.set_xlabel('Date', fontsize=12, color='#2C3E50')  # Rótulo X em cinza escuro
+    ax.set_ylabel(f'Predicted Sales for Store {store_id}', fontsize=14, color='#2C3E50')  # Rótulo Y em cinza escuro
 
     # Salvando o gráfico como imagem
     filepath = f'temp_chart_{store_id}.png'
@@ -163,7 +228,7 @@ def index():
             return Response( 'OK', status = 200)
 
     else:
-        return '<h1> Rossman Telegran BOT </h1>'
+        return '<h1>Rossman Telegram BOT | <a href="https://t.me/TheRossmannBot" target="_blank">link</a></h1>'
 
 
 if __name__ == '__main__':
