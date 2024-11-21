@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 import pandas as pd 
 from flask import Flask, request, Response
@@ -28,6 +29,7 @@ TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/sendMessage?chat_id=6056307810&text=Hi Biruliru, I am doing good, tks!
 
 # 6056307810
+
 
 def send_message(chat_id, text):
     url = f'https://api.telegram.org/bot{TOKEN}/'
@@ -69,7 +71,22 @@ def predict(data):
 
     header = {'Content-type': 'application/json'}
 
-    r = requests.post(url, data = data, headers = header)
+    try:
+        r = requests.post(url, data = data, headers = header)
+        r.raise_for_status()
+    
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao fazer POST: {e}")
+        print("Tentando reativar a API...")
+        r = requests.get('https://ds-em-producao-n8qd.onrender.com')
+        print("Ativando API!")
+        time.sleep(10)
+        if r.status_code == 200:
+            print("API ativada com sucesso!")
+            predict(data)
+        else:
+            print(f"Falha ao acessar a API. Status Code: {r.status_code}")
 
     print('Status Code {}!!'.format( r.status_code ))
 
@@ -237,6 +254,7 @@ def index():
 
 
 if __name__ == '__main__':
+
     port = os.environ.get('PORT',5000)
     app.run(host='0.0.0.0', port =port)
 
