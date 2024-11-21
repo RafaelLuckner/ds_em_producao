@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 import pandas as pd 
 from flask import Flask, request, Response
@@ -28,6 +29,7 @@ TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/sendMessage?chat_id=6056307810&text=Hi Biruliru, I am doing good, tks!
 
 # 6056307810
+
 
 def send_message(chat_id, text):
     url = f'https://api.telegram.org/bot{TOKEN}/'
@@ -69,7 +71,23 @@ def predict(data):
 
     header = {'Content-type': 'application/json'}
 
-    r = requests.post(url, data = data, headers = header)
+    try:
+        r = requests.post(url, data=data, headers=header, timeout=120)
+        r.raise_for_status()
+    
+    
+    except Exception as e:
+        print(f"Erro ao fazer POST: {e}")
+        print("Tentando reativar a API...")
+        r = requests.get('https://ds-em-producao-n8qd.onrender.com/machine_learning_api/predict', timeout=120)
+        print("Ativando API!")
+        time.sleep(60)
+
+        if r.status_code == 200:
+            print("API ativada com sucesso!")
+            predict(data)
+        else:
+            print(f"Falha ao acessar a API. Status Code: {r.status_code}")
 
     print('Status Code {}!!'.format( r.status_code ))
 
@@ -81,13 +99,11 @@ def parse_message(message):
     chat_id = message['message']['chat']['id']
     store_id = message['message']['text']
 
-    if store_id == '/start':
+    store_id = store_id.replace('/' , '')
+    if store_id == 'start':
         send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
         send_message(chat_id, "On the first interaction after a long period of inactivity, the response might take up to a minute.")
-        store_id = store_id.replace('/' , '')
         return chat_id, store_id
-    
-    store_id = store_id.replace('/' , '')
 
     try:
         store_id = int(store_id)
@@ -187,56 +203,57 @@ def send_chart(chat_id, filepath):
     else:
         print(f"Erro ao enviar gráfico: {r.text}")
 
+
 # API initialize 
 app = Flask(__name__) 
 
-@app.route( '/', methods = ['GET', 'POST'])
 
+
+
+@app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         message = request.get_json()
         print(f"Payload recebido: {message}")
 
         chat_id, store_id = parse_message(message)
+        print(f"Store_ID: {store_id}")
 
-        if store_id not in ['error','start']:
-
-            # lading data
+        if store_id not in ['error', 'start']:
+            # Lading data
             data = load_dataset(store_id)
-            # prediction
+            
+            # Prediction
             if data != 'error':
+                    
                 d1 = predict(data)
 
-                # calculation
-                d2 = d1[['store','prediction']].groupby('store').sum('prediction').reset_index()
+                # Calculation
+                d2 = d1[['store', 'prediction']].groupby('store').sum('prediction').reset_index()
 
                 # Criar e enviar gráfico
                 filepath = create_chart(d1, store_id)
                 send_chart(chat_id, filepath)
 
-
-                # send message    
+                # Send message    
                 msg = (f'Store Number {d2["store"].values[0]}: will sell ${d2["prediction"].values[0]:,.2f} in the next 6 weeks')
                 send_message(chat_id, msg)
 
                 os.remove(filepath)
-                return Response( 'OK', status = 200)
-            
+                return Response('OK', status=200)
             else:
                 send_message(chat_id, 'Store Not Available')
-                return Response( 'OK', status = 200)       
-             
-        else: 
+                return Response('OK', status=200)
+        else:
             if store_id == 'start':
-                return Response( 'OK', status = 200)
-            send_message(chat_id, 'Store ID is Wrong')
-            return Response( 'OK', status = 200)
-
+                return Response('OK', status=200)
+            else:
+                send_message(chat_id, 'Store ID is Wrong')
+                return Response('OK', status=200)
     else:
         return '<h1>Rossman Telegram BOT | <a href="https://t.me/TheRossmannBot" target="_blank">link</a></h1>'
-
-
 if __name__ == '__main__':
+
     port = os.environ.get('PORT',5000)
     app.run(host='0.0.0.0', port =port)
 
