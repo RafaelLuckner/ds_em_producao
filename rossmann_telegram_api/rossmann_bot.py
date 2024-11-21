@@ -83,6 +83,7 @@ def parse_message(message):
 
     if store_id == '/start':
         send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
+        send_message(chat_id, "On the first interaction after a long period, the response may take a minute")
         return chat_id, 'start'
     
     store_id = store_id.replace('/' , '')
