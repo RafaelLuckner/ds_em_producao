@@ -83,8 +83,9 @@ def parse_message(message):
 
     if store_id == '/start':
         send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
-        send_message(chat_id, "On the first interaction after a long period, the response may take a minute")
-        return chat_id, 'start'
+        send_message(chat_id, "On the first interaction after a long period of inactivity, the response might take up to a minute.")
+        store_id = store_id.replace('/' , '')
+        return chat_id, store_id
     
     store_id = store_id.replace('/' , '')
 
@@ -128,7 +129,7 @@ def create_chart(data, store_id):
 
     # Plotando os valores e os dias da semana dos dias de maior faturamento por semana
     for _, row in top_days_per_week.iterrows():
-        ax.annotate(f"{row['sales']:,.0f}$", 
+        ax.annotate(f"${row['sales']:,.0f}", 
                     (row['date'], row['sales']), 
                     textcoords="offset points", 
                     xytext=(-5, 10), ha='center', fontsize=12, color=highlight_color, fontweight='bold')
@@ -160,7 +161,7 @@ def create_chart(data, store_id):
     total_sales = df['sales'].sum()
 
     # Adicionando a caixa com o total de vendas no canto superior direito
-    plt.text(0.98, 1, f'Total Sales: {total_sales:,.0f}$', ha='right', va='top', fontsize=20, 
+    plt.text(0.98, 1, f'Total Sales: ${total_sales:,.0f}', ha='right', va='top', fontsize=20, 
             bbox=dict(facecolor='white', edgecolor=highlight_color, boxstyle='round,pad=0.7', alpha=1), fontweight='normal', transform=ax.transAxes)
 
 
@@ -198,9 +199,7 @@ def index():
 
         chat_id, store_id = parse_message(message)
 
-        if store_id != 'error':
-            if store_id == 'start':
-                return Response( 'OK', status = 200)
+        if store_id not in ['error','start']:
 
             # lading data
             data = load_dataset(store_id)
@@ -228,6 +227,8 @@ def index():
                 return Response( 'OK', status = 200)       
              
         else: 
+            if store_id == 'start':
+                return Response( 'OK', status = 200)
             send_message(chat_id, 'Store ID is Wrong')
             return Response( 'OK', status = 200)
 
