@@ -83,7 +83,7 @@ def parse_message(message):
 
     if store_id == '/start':
         send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
-        return Response( 'OK', status = 200)
+        return chat_id, 'start'
     
     store_id = store_id.replace('/' , '')
 
@@ -198,6 +198,9 @@ def index():
         chat_id, store_id = parse_message(message)
 
         if store_id != 'error':
+            if store_id == 'start':
+                return Response( 'OK', status = 200)
+
             # lading data
             data = load_dataset(store_id)
             # prediction

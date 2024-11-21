@@ -10,7 +10,7 @@ model = pickle.load( open('model/model_russmann.pkl', 'rb'))
 # initialize API
 app = Flask(__name__)
 
-@app.route( '/rossmann/predict', methods = ['POST'])
+@app.route( '/machine_learning_api/predict', methods = ['POST'])
 def rossmann_predict():
     test_json = request.get_json()
 
