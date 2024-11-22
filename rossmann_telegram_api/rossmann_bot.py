@@ -30,6 +30,17 @@ TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 
 # 6056307810
 
+def delete_message(chat_id, message_id, token):
+    url = f"https://api.telegram.org/bot{token}/deleteMessage"
+    payload = {
+        'chat_id': chat_id,
+        'message_id': message_id
+    }
+    response = requests.post(url, json=payload)
+    if response.status_code == 200:
+        print(f"Mensagem {message_id} deletada com sucesso.")
+    else:
+        print(f"Falha ao deletar mensagem {message_id}. Status Code: {response.status_code}")
 
 def send_message(chat_id, text):
     url = f'https://api.telegram.org/bot{TOKEN}/'
@@ -72,47 +83,54 @@ def predict(data):
     header = {'Content-type': 'application/json'}
 
     try:
-        r = requests.post(url, data=data, headers=header, timeout=120)
+        r = requests.post(url, data=data, headers=header, timeout=10)
         r.raise_for_status()
     
     
     except Exception as e:
-        print(f"Erro ao fazer POST: {e}")
-        print("Tentando reativar a API...")
-        r = requests.get('https://ds-em-producao-n8qd.onrender.com/machine_learning_api/predict', timeout=120)
-        print("Ativando API!")
-        time.sleep(60)
-
-        if r.status_code == 200:
-            print("API ativada com sucesso!")
-            predict(data)
-        else:
-            print(f"Falha ao acessar a API. Status Code: {r.status_code}")
-
-    print('Status Code {}!!'.format( r.status_code ))
+        url = "https://ds-em-producao-n8qd.onrender.com"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                print("Serviço ativo!")
+            else:
+                print("Serviço não respondeu como esperado:", response.status_code)
+        except Exception as e:
+            print("Erro ao acessar o serviço:", e)
+            
+        r = requests.post(url, data=data, headers=header, timeout=30)
 
     d1 = pd.DataFrame(r.json(), columns=r.json()[0].keys())
+
 
     return d1
 
 def parse_message(message):
     chat_id = message['message']['chat']['id']
-    store_id = message['message']['text']
+    message_id = message['message']['message_id']
 
-    store_id = store_id.replace('/' , '')
-    if store_id == 'start':
-        send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
-        send_message(chat_id, "On the first interaction after a long period of inactivity, the response might take up to a minute.")
+    if 'text' in message['message']:
+
+        store_id = message['message']['text']
+
+        store_id = store_id.replace('/' , '')
+        if store_id == 'start':
+            send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
+            send_message(chat_id, "On the first interaction after a long period of inactivity, the response might take up to a minute.")
+            return chat_id, store_id
+
+        try:
+            store_id = int(store_id)
+
+        except ValueError:
+            store_id = 'error'
+
         return chat_id, store_id
-
-    try:
-        store_id = int(store_id)
-
-    except ValueError:
-        store_id = 'error'
-
-
-    return chat_id, store_id
+    
+    else:
+        send_message(chat_id, 'Message is not text. deleted...')
+        delete_message(chat_id, message_id, TOKEN)
+        return None, None
 
 def create_chart(data, store_id):
     data['date'] = pd.to_datetime(data['date'])
@@ -121,29 +139,26 @@ def create_chart(data, store_id):
     start_date = data['date'][0]
     dates = data['date']
 
-    # Criando a figura e o eixo
     fig, ax = plt.subplots(figsize=(14, 8))
 
-    # Paleta de cores
     bar_color = '#A6ACAF'  # Cinza
     highlight_color = '#C0392B'  # Vermelho 
 
-    # Criando o gráfico de barras com cores personalizadas (cinza)
+
     bars = ax.bar(dates, sales, label=f'Store {store_id}', color=bar_color, edgecolor='#778899', linewidth=1.5)
 
-    # Criando um DataFrame para manipulação
     df = pd.DataFrame({'date': dates, 'sales': sales})
 
-    # Adicionando uma coluna com o nome do dia da semana
+    # coluna nome dia da semana
     df['weekday'] = df['date'].dt.strftime('%A')
 
-    # Adicionando uma coluna com o número da semana
+    # coluna número da semana
     df['week'] = df['date'].dt.isocalendar().week
 
-    # Encontrando o dia com mais vendas por semana
+    # dia com mais vendas por semana
     top_days_per_week = df.loc[df.groupby('week')['sales'].idxmax()]
 
-    # Plotando os valores e os dias da semana dos dias de maior faturamento por semana
+    # Plot valores e dias da semana de maior faturamento 
     for _, row in top_days_per_week.iterrows():
         ax.annotate(f"${row['sales']:,.0f}", 
                     (row['date'], row['sales']), 
@@ -154,10 +169,10 @@ def create_chart(data, store_id):
                     textcoords="offset points", 
                     xytext=(-5, 25), ha='center', fontsize=12, color='black')  
 
-    # Configurando o formato das datas no eixo X
+    # formato das datas no eixo X
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b %Y'))
 
-    # Definindo o intervalo para as datas no eixo X (semanal)
+    # intervalo para as datas no eixo X 
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO, interval=1))
 
@@ -167,28 +182,26 @@ def create_chart(data, store_id):
     ax.spines['bottom'].set_visible(True)  
     ax.xaxis.label.set_visible(False)
 
-    # Ajustando as margens
+    # subindo o eixo y
     ax.set_ylim(0, sales.max() * 1.2)
 
     # Melhorando a grade
     ax.grid(True, linestyle='--', alpha=0.5)
 
-    # Calculando o total de vendas
+    # Caixa total de vendas
     total_sales = df['sales'].sum()
-
-    # Adicionando a caixa com o total de vendas no canto superior direito
     plt.text(0.98, 1, f'Total Sales: ${total_sales:,.0f}', ha='right', va='top', fontsize=20, 
             bbox=dict(facecolor='white', edgecolor=highlight_color, boxstyle='round,pad=0.7', alpha=1), fontweight='normal', transform=ax.transAxes)
 
 
-    ax.set_title(' ', fontsize=10, color='#2C3E50',y=1)  # Título em cinza escuro
-    # ax.set_xlabel('Date', fontsize=12, color='#2C3E50')  # Rótulo X em cinza escuro
-    ax.set_ylabel(f'Predicted Sales for Store {store_id}', fontsize=14, color='#2C3E50')  # Rótulo Y em cinza escuro
+    ax.set_title(' ', fontsize=10, color='#2C3E50',y=1) 
+    # ax.set_xlabel('Date', fontsize=12, color='#2C3E50') 
+    ax.set_ylabel(f'Predicted Sales for Store {store_id}', fontsize=14, color='#2C3E50')  
 
-    # Salvando o gráfico como imagem
+
     filepath = f'temp_chart_{store_id}.png'
     plt.savefig(filepath)
-    plt.close()  # Fecha o gráfico para economizar memória
+    plt.close()  
 
     return filepath
 
@@ -203,12 +216,8 @@ def send_chart(chat_id, filepath):
     else:
         print(f"Erro ao enviar gráfico: {r.text}")
 
-
 # API initialize 
 app = Flask(__name__) 
-
-
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
