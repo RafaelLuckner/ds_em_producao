@@ -82,24 +82,9 @@ def predict(data):
 
     header = {'Content-type': 'application/json'}
 
-    try:
-        r = requests.post(url, data=data, headers=header, timeout=10)
-        r.raise_for_status()
+    r = requests.post(url, data=data, headers=header, timeout=10)
+    r.raise_for_status()
     
-    
-    except Exception as e:
-        url = "https://ds-em-producao-n8qd.onrender.com"
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                print("Serviço ativo!")
-            else:
-                print("Serviço não respondeu como esperado:", response.status_code)
-        except Exception as e:
-            print("Erro ao acessar o serviço:", e)
-            
-        r = requests.post(url, data=data, headers=header, timeout=30)
-
     d1 = pd.DataFrame(r.json(), columns=r.json()[0].keys())
 
 
@@ -231,11 +216,19 @@ def index():
         if store_id not in ['error', 'start']:
             # Lading data
             data = load_dataset(store_id)
-            
+                        
             # Prediction
             if data != 'error':
-                    
-                d1 = predict(data)
+                while True:
+                    try:
+                        d1 = predict(data)
+                        break
+                    except Exception as e:
+                        if not mensagem_enviada:
+                            msg = ("To activate the prediction algorithm, click on the link and return to Telegram:: https://ds-em-producao-n8qd.onrender.com")
+                            send_message(chat_id, msg)
+                            mensagem_enviada = True
+                
 
                 # Calculation
                 d2 = d1[['store', 'prediction']].groupby('store').sum('prediction').reset_index()
@@ -265,7 +258,4 @@ if __name__ == '__main__':
 
     port = os.environ.get('PORT',5000)
     app.run(host='0.0.0.0', port =port)
-
-
-
 
