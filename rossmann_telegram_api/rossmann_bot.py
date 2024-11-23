@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 # constans 
 TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 
+
 # # info about the bot
 # https://api.telegram.org/bot7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM/getMe
 
@@ -77,16 +78,15 @@ def load_dataset(store_id):
     return data
 
 def predict(data):
-        # API Call
+    # API Call
     url = 'https://ds-em-producao-n8qd.onrender.com/machine_learning_api/predict'
 
     header = {'Content-type': 'application/json'}
 
-    r = requests.post(url, data=data, headers=header, timeout=10)
+    r = requests.post(url, data=data, headers=header)
     r.raise_for_status()
     
     d1 = pd.DataFrame(r.json(), columns=r.json()[0].keys())
-
 
     return d1
 
@@ -101,8 +101,11 @@ def parse_message(message):
         store_id = store_id.replace('/' , '')
         if store_id == 'start':
             send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
-            send_message(chat_id, "On the first interaction after a long period of inactivity, the response might take up to a minute.")
-            return chat_id, store_id
+            msg = ("To activate the prediction algorithm, click on the link and return to Telegram: https://ds-em-producao-n8qd.onrender.com")
+            send_message(chat_id, msg)
+            msg = ("This process may take a few minutes")
+            send_message(chat_id, msg)
+            return chat_id, store_id, message_id
 
         try:
             store_id = int(store_id)
@@ -110,12 +113,12 @@ def parse_message(message):
         except ValueError:
             store_id = 'error'
 
-        return chat_id, store_id
+        return chat_id, store_id, message_id
     
     else:
         send_message(chat_id, 'Message is not text. deleted...')
         delete_message(chat_id, message_id, TOKEN)
-        return None, None
+        return None, None, None
 
 def create_chart(data, store_id):
     data['date'] = pd.to_datetime(data['date'])
@@ -201,6 +204,7 @@ def send_chart(chat_id, filepath):
     else:
         print(f"Erro ao enviar gráfico: {r.text}")
 
+
 # API initialize 
 app = Flask(__name__) 
 
@@ -210,7 +214,7 @@ def index():
         message = request.get_json()
         print(f"Payload recebido: {message}")
 
-        chat_id, store_id = parse_message(message)
+        chat_id, store_id, message_id = parse_message(message)
         print(f"Store_ID: {store_id}")
 
         if store_id not in ['error', 'start']:
@@ -219,16 +223,22 @@ def index():
                         
             # Prediction
             if data != 'error':
+                i=0
                 while True:
                     try:
                         d1 = predict(data)
                         break
                     except Exception as e:
-                        if not mensagem_enviada:
-                            msg = ("To activate the prediction algorithm, click on the link and return to Telegram:: https://ds-em-producao-n8qd.onrender.com")
-                            send_message(chat_id, msg)
-                            mensagem_enviada = True
-                
+                        i+=1
+                        print(i)
+                        if i%18==0:
+                            send_message(chat_id, "Please, activate the algorithm with the link. To info send the /start message")
+                        time.sleep(10)
+                        if i==36:
+                            send_message(chat_id, "time exceeded")
+                            delete_message(chat_id, message_id, TOKEN)
+                            break
+
 
                 # Calculation
                 d2 = d1[['store', 'prediction']].groupby('store').sum('prediction').reset_index()
