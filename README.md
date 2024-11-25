@@ -1,6 +1,5 @@
 
-# Projeto Previsão de Vendas Rossmann
-
+# Projeto Previsão de Vendas Rossmann  
 
 ![Rossmann Store](/img/rossmann_store.png)
 
@@ -12,7 +11,7 @@ Os gerentes da Rossmann enfrentam o desafio de prever com precisão as vendas di
 Desenvolver uma solução automatizada baseada em Machine Learning para prever vendas diárias com até seis semanas de antecedência de maneira precisa e confiável. A aplicação será acessível remotamente e oferecerá aos gerentes uma ferramenta prática e eficiente para otimizar o planejamento de estoques, alocação de recursos e campanhas promocionais, garantindo resultados mais consistentes.
 
 ## Produto Final
-O resultado é um bot no Telegram que, ao receber o número de uma loja, gera previsões para as próximas seis semanas, acompanhadas de gráficos que destacam os dias de maior relevância semanal nas vendas, proporcionando suporte estratégico ágil e visualmente claro.
+O resultado é um [bot no telegram](https://t.me/TheRossmannBot) que, ao receber o número de uma loja, gera previsões para as próximas seis semanas, acompanhadas de gráficos que destacam os dias de maior relevância semanal nas vendas, proporcionando suporte estratégico ágil e visualmente claro.
  
 ![bot](/img/bot_telegram.png)
 ## [Link para o Bot](https://t.me/TheRossmannBot)
@@ -20,21 +19,21 @@ O resultado é um bot no Telegram que, ao receber o número de uma loja, gera pr
 ![graph_final](/img/graph_final.png)
 
 #
-# Planejamento da solução
-Utilizei o método **CRISP-DM** para estruturar desde o entendimento do problema de negócio e análise dos dados até a modelagem e avaliação dos resultados. A seguir, demonstro os passos do desenvolvimento, os principais insights e os resultados obtidos ao longo da primeira interação completa.
+# Planejamento da Solução
+Utilizei o método **CRISP-DM** para estruturar desde o entendimento do problema de negócio e análise dos dados até a modelagem dos algoritmos e avaliação dos resultados. A seguir, demonstro os passos do desenvolvimento, os principais insights e os resultados obtidos ao longo da primeira interação completa.
 
 ![crisp](/img/crisp.png)
 
-#### 1. Compreensão do negócio
+#### 1. Compreensão do Negócio
 - Definição do problema a ser solucionado e estabelecimento dos objetivos do projeto.
 
 #### 2. Compreensão dos dados
 - Coleta e análise inicial dos dados para identificar problemas e possibilidades de resolução.
 - Análise exploratória dos dados para geração de insights e identificação de inconsistências.
 
-#### 3. Preparação dos dados
+#### 3. Preparação dos Dados
 - Limpeza de Dados: Remoção de dados inconsistentes e preenchimento de valores ausentes.
-- Data Engeneering: Criação de novas variáveis a partir dos dados brutos.
+- Data Engineering: Criação de novas variáveis a partir dos dados brutos.
 - Transformação dos dados: Conversão dos dados para o formato adequado para modelagem.
 
 #### 4. Modelagem
@@ -47,28 +46,30 @@ Utilizei o método **CRISP-DM** para estruturar desde o entendimento do problema
 - Análise dos resultados para garantir que o modelo atenda aos objetivos do negócio.
 - Análise de viabilidade para encontrar a melhor relação entre tamanho/custo dos modelos e seus resultados.
 
-#### 6. Implantação do modelo em um ambiente de produção.
-- Implantação do Modelo: Disponibilização do modelo em uma API que recebe novos dados e retorna previsões.
-- Bot no Telegram: Desenvolvimento de um bot para facilitar o acesso e interação do usuário com o modelo.
+#### 6. Implantação do Modelo em um Ambiente de Produção.
+- Disponibilização do modelo em uma API que recebe novos dados e retorna previsões.
+-  Desenvolvimento de um bot no Telegram para facilitar o acesso e interação do usuário com o modelo.
 
 #
 
-# Principais Insigths
+# Principais Insights
 
-#### 1- Lojas com sortimento extra tem uma média de venda maior, mas tem uma menor quantidade de lojas e vendas se comparadas com o tipo basic e extended.
+
+1- Lojas com sortimento extra tem uma média de venda maior, mas tem uma menor quantidade de lojas e vendas se comparadas com o tipo basic e extended.
 ![sales_assortment](/img/sales_assortment.png)
-
-#### 2- Lojas com competidores a pouco tempo tendem a ter menos vendas mas aquelas com competidores a mais de 150 meses vendem mais.
+#
+2- Lojas com competidores a pouco tempo tendem a ter menos vendas mas aquelas com competidores a mais de 150 meses vendem mais.
 ![competition_time](/img/competition_time.png)
+#
+3- Houve uma redução na quantidade de vendas ao decorrer do tempo, porém o ano de 2015 ainda está em andamento.
 
-#### 3- Houve uma redução na quantidade de vendas ao decorrer do tempo, porém o ano de 2015 ainda está em andamento.
 ![sales_month](/img/sales_month.png)
 
 
 # 
 # Machine Learning
 
-## Modelos utilizados e resultados 
+## Modelos Utilizados e Resultados 
 ![models result](/img/models_performance.png)
 
 #### 1. Random Forest Regressor  
@@ -106,9 +107,9 @@ Utilizei o método **CRISP-DM** para estruturar desde o entendimento do problema
 
  Utilizei Cross Validation para avaliar a performance do modelo, levando em consideração a natureza temporal dos dados. Como o objetivo era prever as vendas diárias e semanais, com variações ao longo do tempo, era fundamental validar o modelo de forma que refletisse essas mudanças.
 
-### Como foi aplicada:
+Como foi aplicada:
 
-- Ao invés de realizar uma divisão aleatória dos dados, apliquei uma **divisão temporal**, onde os dados foram separados em períodos consecutivos.
+- Foi aplicada uma **divisão temporal**, onde os dados foram separados em períodos consecutivos.
 - O modelo foi treinado com dados de um período e validado com dados de períodos posteriores. Isso garantiu que a previsão fosse robusta e capaz de generalizar bem para dados futuros, considerando as variações sazonais.
 
 A imagem abaixo ilustra o processo de **Cross Validation** aplicado nos dados.
@@ -123,5 +124,38 @@ A imagem abaixo ilustra o processo de **Cross Validation** aplicado nos dados.
 
 Após utilizar o Average Model como base e avaliar os modelos lineares, o **Random Forest** foi testado e apresentou bons resultados. No entanto, o **XGBoost** foi escolhido como modelo final devido à sua **eficiência computacional** e **menor uso de memória**, fatores essenciais para a execução em um servidor gratuito. Embora o **Random Forest** tenha apresentado desempenho satisfatório, o **XGBoost** se destacou pela **escalabilidade** e **robustez**, oferecendo uma solução mais leve e rápida, ideal para o projeto, especialmente em um ambiente com recursos limitados.
 
+## Resultado após encontrar valor ideal dos hiperparâmetros 
+![model tuned](/img/model_tuned.png)
 
 
+# Performance
+
+O modelo obteve um erro percentual médio de **8.83%** com baixa ocorrencia de outliers.
+
+![percentage error](/img/percentage_error.png)
+
+
+Previsão de algumas lojas com os melhores e piores cenarios de acordo com o percentual de erro modelo 
+
+![store prediction](/img/predict_stores.png)
+
+Melhor e pior cenario do total de vendas da rede Rossmann
+
+![store prediction](/img/total_predict.png)
+
+
+#
+# Conclusão Final
+
+O projeto apresentou resultados satisfatórios com a implementação do modelo **XGBoost**, que se mostrou eficiente e adequado para lidar com grandes volumes de dados, além de ser escalável e de baixo custo computacional. O uso de **Cross-Validation** foi essencial para garantir a confiabilidade das previsões, respeitando as variações sazonais e de longo prazo das vendas.
+
+O **bot no Telegram** integrou o modelo preditivo a um ambiente acessível e prático, permitindo que os gerentes gerassem previsões em tempo real. A ferramenta fornece estimativas de vendas diárias e semanais baseadas em dados reais de produção, acompanhadas de gráficos informativos, facilitando a análise e o planejamento estratégico de forma eficiente e rápida.
+
+
+
+
+## Próximos Passos
+
+1.  Ajustar os hiperparâmetros e adicionar novas features para aumentar a acurácia do modelo.
+2. Integrar o modelo com sistemas da rede Rossmann para atualização dos dados mensal ou semanalmente.
+3. Avaliar o desempenho do modelo à medida que novos dados e lojas forem incorporados.
