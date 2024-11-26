@@ -31,17 +31,6 @@ TOKEN =  '7805674894:AAF4Ykx5n5QlERyhtI7L7c-brdVkqNKi3bM'
 
 # 6056307810
 
-def delete_message(chat_id, message_id, token):
-    url = f"https://api.telegram.org/bot{token}/deleteMessage"
-    payload = {
-        'chat_id': chat_id,
-        'message_id': message_id
-    }
-    response = requests.post(url, json=payload)
-    if response.status_code == 200:
-        print(f"Mensagem {message_id} deletada com sucesso.")
-    else:
-        print(f"Falha ao deletar mensagem {message_id}. Status Code: {response.status_code}")
 
 def send_message(chat_id, text):
     url = f'https://api.telegram.org/bot{TOKEN}/'
@@ -83,9 +72,25 @@ def predict(data):
 
     header = {'Content-type': 'application/json'}
 
-    r = requests.post(url, data=data, headers=header)
-    r.raise_for_status()
+    try:
+        r = requests.post(url, data = data, headers = header)
+        r.raise_for_status()
     
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao fazer POST: {e}")
+        print("Tentando reativar a API...")
+        r = requests.get('https://ds-em-producao-n8qd.onrender.com')
+        print("Ativando API!")
+        time.sleep(10)
+        if r.status_code == 200:
+            print("API ativada com sucesso!")
+            predict(data)
+        else:
+            print(f"Falha ao acessar a API. Status Code: {r.status_code}")
+
+    print('Status Code {}!!'.format( r.status_code ))
+
     d1 = pd.DataFrame(r.json(), columns=r.json()[0].keys())
 
     return d1
@@ -94,31 +99,20 @@ def parse_message(message):
     chat_id = message['message']['chat']['id']
     message_id = message['message']['message_id']
 
-    if 'text' in message['message']:
+    store_id = store_id.replace('/' , '')
+    if store_id == 'start':
+        send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
+        send_message(chat_id, "On the first interaction after a long period of inactivity, the response might take up to a minute.")
+        return chat_id, store_id
 
-        store_id = message['message']['text']
+    try:
+        store_id = int(store_id)
 
-        store_id = store_id.replace('/' , '')
-        if store_id == 'start':
-            send_message(chat_id, "Hello! I am the sales prediction bot. Send a store number to receive the sales forecast!")
-            msg = ("To activate the prediction algorithm, click on the link and return to Telegram: https://ds-em-producao-n8qd.onrender.com")
-            send_message(chat_id, msg)
-            msg = ("This process may take a few minutes")
-            send_message(chat_id, msg)
-            return chat_id, store_id, message_id
+    except ValueError:
+        store_id = 'error'
 
-        try:
-            store_id = int(store_id)
 
-        except ValueError:
-            store_id = 'error'
-
-        return chat_id, store_id, message_id
-    
-    else:
-        send_message(chat_id, 'Message is not text. deleted...')
-        delete_message(chat_id, message_id, TOKEN)
-        return None, None, None
+    return chat_id, store_id
 
 def create_chart(data, store_id):
     data['date'] = pd.to_datetime(data['date'])
@@ -178,6 +172,8 @@ def create_chart(data, store_id):
 
     # Caixa total de vendas
     total_sales = df['sales'].sum()
+
+    # Adicionando a caixa com o total de vendas no canto superior direito
     plt.text(0.98, 1, f'Total Sales: ${total_sales:,.0f}', ha='right', va='top', fontsize=20, 
             bbox=dict(facecolor='white', edgecolor=highlight_color, boxstyle='round,pad=0.7', alpha=1), fontweight='normal', transform=ax.transAxes)
 
@@ -214,11 +210,12 @@ def index():
         message = request.get_json()
         print(f"Payload recebido: {message}")
 
-        chat_id, store_id, message_id = parse_message(message)
-        print(f"Store_ID: {store_id}")
+        chat_id, store_id = parse_message(message)
+        print(f'Store_ID: {store_id}')
 
-        if store_id not in ['error', 'start']:
-            # Lading data
+        if store_id not in ['error','start']:
+
+            # lading data
             data = load_dataset(store_id)
                         
             # Prediction
@@ -255,13 +252,15 @@ def index():
                 return Response('OK', status=200)
             else:
                 send_message(chat_id, 'Store Not Available')
-                return Response('OK', status=200)
-        else:
+                return Response( 'OK', status = 200)       
+             
+        else: 
             if store_id == 'start':
-                return Response('OK', status=200)
-            else:
+                return Response( 'OK', status = 200)
+            else: 
                 send_message(chat_id, 'Store ID is Wrong')
-                return Response('OK', status=200)
+                return Response( 'OK', status = 200)
+
     else:
         return '<h1>Rossman Telegram BOT | <a href="https://t.me/TheRossmannBot" target="_blank">link</a></h1>'
 if __name__ == '__main__':
