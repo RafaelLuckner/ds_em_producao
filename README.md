@@ -139,7 +139,7 @@ Previsão de algumas lojas com os melhores e piores cenarios de acordo com o per
 
 ![store prediction](/img/predict_stores.png)
 
-Melhor e pior cenario do total de vendas da rede Rossmann
+Melhor e pior cenário do total de vendas da rede Rossmann
 
 ![store prediction](/img/total_predict.png)
 
