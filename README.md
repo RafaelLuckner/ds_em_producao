@@ -135,7 +135,7 @@ O modelo obteve um erro percentual médio de **8.83%** com baixa ocorrencia de o
 ![percentage error](/img/percentage_error.png)
 
 
-Previsão de algumas lojas com os melhores e piores cenarios de acordo com o percentual de erro modelo 
+Previsão de algumas lojas com os melhores e piores cenários de acordo com o percentual de erro modelo 
 
 ![store prediction](/img/predict_stores.png)
 
